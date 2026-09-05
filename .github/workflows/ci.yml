@@ -12,8 +12,21 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+
   typecheck:
     name: Typecheck
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +39,7 @@ jobs:
 
   unit-tests:
     name: Unit tests (coverage)
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +60,7 @@ jobs:
 
   e2e:
     name: E2E tests (placeholder)
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -54,6 +69,7 @@ jobs:
 
   a11y:
     name: Accessibility tests (placeholder)
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -62,6 +78,7 @@ jobs:
 
   dependency-scan:
     name: Dependency scan - Snyk (placeholder)
+    needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

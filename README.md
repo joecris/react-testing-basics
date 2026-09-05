@@ -167,19 +167,7 @@ test('trigger some awesome feature when clicking the button', async () => {
 
 ## Other Tests
 
-Typescript TS check:
-
-```
-{
-  ...
-  "scripts": {
-    ...
-    "test:typecheck": "tsc -b --noEmit" // build mode
-    ...
-  },
-  ...
-}
-```
+### Linting
 
 Adding ES lints:
 `eslint-plugin-testing-library`
@@ -192,8 +180,19 @@ https://www.npmjs.com/package/eslint-plugin-vitest
 Optional
 a short CI script that diffs src/components/_.tsx against src/components/_.test.tsx and fails the build if one's missing.
 
-Layout and Mobile responsiveness
-How to do this in practice besides snapshots
+### Typescript TS check:
+
+```
+{
+  ...
+  "scripts": {
+    ...
+    "test:typecheck": "tsc -b --noEmit" // build mode
+    ...
+  },
+  ...
+}
+```
 
 ## Running tests in CI/CD
 
@@ -213,10 +212,28 @@ concurrency:
 
 `concurrency` cancels a stale run if you push again before the previous run finishes, so CI minutes aren't wasted checking commits you've already superseded.
 
+### Lint (runs first)
+
+```
+lint:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npm run lint
+```
+
+Every other job declares `needs: lint`, so nothing else starts until lint passes. It's the cheapest, fastest check to run, so it acts as a fail-fast gate — a lint error blocks the run before CI spends time on typecheck, coverage, or the slower placeholder jobs.
+
 ### Typecheck
 
 ```
 typecheck:
+  needs: lint
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
@@ -234,6 +251,7 @@ Runs `tsc -b --noEmit` (see [Other Tests](#other-tests) above for why `-b` is re
 
 ```
 unit-tests:
+  needs: lint
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
@@ -253,18 +271,21 @@ These three jobs are scaffolded but intentionally not implemented yet — each j
 
 ```
 e2e:
+  needs: lint
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
     - run: echo "No E2E runner configured yet (e.g. Playwright/Cypress)."
 
 a11y:
+  needs: lint
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
     - run: echo "No automated a11y runner configured yet (e.g. jest-axe or Pa11y)."
 
 dependency-scan:
+  needs: lint
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
@@ -276,3 +297,6 @@ dependency-scan:
 ```
 
 Dependency scanning needs a `SNYK_TOKEN` added as a repo secret (Settings → Secrets and variables → Actions) before uncommenting the real step.
+
+Layout and Mobile responsiveness
+How to do this in practice besides snapshots
