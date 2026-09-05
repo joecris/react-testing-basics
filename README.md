@@ -196,3 +196,83 @@ Layout and Mobile responsiveness
 How to do this in practice besides snapshots
 
 ## Running tests in CI/CD
+
+A GitHub Actions workflow at [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push/PR to `main`. Each concern is its own job so a failure shows up clearly per-check in the PR status, instead of one big pass/fail.
+
+```
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+```
+
+`concurrency` cancels a stale run if you push again before the previous run finishes, so CI minutes aren't wasted checking commits you've already superseded.
+
+### Typecheck
+
+```
+typecheck:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npm run test:typecheck
+```
+
+Runs `tsc -b --noEmit` (see [Other Tests](#other-tests) above for why `-b` is required here) — catches type errors across the whole project reference graph without producing build output.
+
+### Unit tests with coverage
+
+```
+unit-tests:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npm run test:coverage
+```
+
+Runs `vitest run --coverage`. No extra CI-side threshold logic is needed — `vitest.config.ts` already defines `coverage.thresholds` (with `perFile: true`), so Vitest itself exits non-zero, and fails this job, the moment any file's coverage drops below the configured floor.
+
+### E2E, Accessibility, and Dependency scanning (placeholders)
+
+These three jobs are scaffolded but intentionally not implemented yet — each just echoes a `TODO` so the workflow shape (and the PR status checks) exist ahead of time. Swap the placeholder step for the real tooling when ready:
+
+```
+e2e:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: echo "No E2E runner configured yet (e.g. Playwright/Cypress)."
+
+a11y:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: echo "No automated a11y runner configured yet (e.g. jest-axe or Pa11y)."
+
+dependency-scan:
+  runs-on: ubuntu-latest
+  steps:
+    - uses: actions/checkout@v4
+    - run: echo "Snyk not configured yet."
+    # Once ready:
+    # - uses: snyk/actions/node@master
+    #   env:
+    #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+```
+
+Dependency scanning needs a `SNYK_TOKEN` added as a repo secret (Settings → Secrets and variables → Actions) before uncommenting the real step.
