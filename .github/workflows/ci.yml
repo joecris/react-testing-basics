@@ -59,13 +59,27 @@ jobs:
           retention-days: 14
 
   e2e:
-    name: E2E tests (placeholder)
+    name: E2E tests (Playwright)
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: "TODO: wire up E2E tests"
-        run: echo "No E2E runner configured yet (e.g. Playwright/Cypress). Replace this step once added."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      # playwright.config.ts builds and serves the production bundle when
+      # CI is set, rather than the dev server, so this exercises what
+      # actually ships.
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 14
 
   a11y:
     name: Accessibility tests (placeholder)

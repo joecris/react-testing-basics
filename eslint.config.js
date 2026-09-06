@@ -8,7 +8,11 @@ import { defineConfig, globalIgnores } from 'eslint/config'
 export default defineConfig([
   globalIgnores(['dist', 'coverage']),
   {
-    files: ['**/*.{ts,tsx}'],
+    // React app code only - Playwright's tests/ and root *.config.ts files
+    // aren't React, and eslint-plugin-react-hooks misfires on Playwright's
+    // fixture API (`async ({ page }, use) => ...`), whose `use` parameter
+    // it pattern-matches as if it were React 19's `use()` hook.
+    files: ['src/**/*.{ts,tsx}'],
     extends: [
       js.configs.recommended,
       tseslint.configs.recommended,
@@ -17,6 +21,13 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+    },
+  },
+  {
+    files: ['*.config.ts', 'tests/**/*.ts'],
+    extends: [js.configs.recommended, tseslint.configs.recommended],
+    languageOptions: {
+      globals: globals.node,
     },
   },
 ])
