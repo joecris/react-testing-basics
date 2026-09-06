@@ -34,6 +34,7 @@ function App() {
     <>
       <NavBar navItems={navItems} />
       <main className="flex flex-col items-center py-8 px-12">
+        <h1 className="text-3xl mb-8 text-center">My ToDo's</h1>
         <Todos todoList={testTodos} />
       </main>
     </>

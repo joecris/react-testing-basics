@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect } from "../fixtures";
 
 // Relies on the seed data currently hardcoded in App.tsx: "Water the plants"
 // and "Walk the dog" start as todo, "Read the book" starts as done. If that

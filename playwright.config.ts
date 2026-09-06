@@ -59,6 +59,14 @@ export default defineConfig({
     //   use: { ...devices['iPhone 12'] },
     // },
 
+    /* iPad Mini's viewport is 768px wide - exactly this app's Tailwind
+       `md:` breakpoint, so this project sits right on that boundary rather
+       than comfortably above or below it. */
+    {
+      name: "Tablet",
+      use: { ...devices["iPad Mini"] },
+    },
+
     /* Test against branded browsers. */
     // {
     //   name: 'Microsoft Edge',

@@ -77,18 +77,29 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: playwright-report
+          name: playwright-report-e2e
           path: playwright-report/
           retention-days: 14
 
   a11y:
-    name: Accessibility tests (placeholder)
+    name: Accessibility tests (Playwright + axe-core)
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: "TODO: wire up accessibility tests"
-        run: echo "No automated a11y runner configured yet (e.g. jest-axe/axe-core or Pa11y). Replace this step once added."
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps
+      - run: npm run test:a11y
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-a11y
+          path: playwright-report/
+          retention-days: 14
 
   dependency-scan:
     name: Dependency scan - Snyk (placeholder)

@@ -34,8 +34,6 @@ describe("Todos", () => {
 
   test("renders headings and buttons", () => {
     render(<Todos todoList={testTodos} />);
-
-    expect(screen.getByText("My ToDo's")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add New" })).toBeInTheDocument();
     expect(
       screen.getByRole("checkbox", { name: "Hide done" }),
