@@ -163,6 +163,96 @@ test('trigger some awesome feature when clicking the button', async () => {
 
 ## E2E Testing
 
+[Playwright](https://playwright.dev/) drives the app in a real browser end-to-end, as opposed to Vitest/RTL's simulated DOM (jsdom doesn't do real layout/rendering, so it can't catch things like CSS/visual bugs). Config lives at [`playwright.config.ts`](playwright.config.ts), tests under [`tests/`](tests).
+
+```
+npm run test:e2e     // headless run
+npm run test:e2e:ui  // Playwright's UI mode - step through, inspect, time-travel
+```
+
+### Organising tests: one spec file per feature, not per component
+
+Mirroring your component tree in `tests/` is a unit-test instinct — e2e should track user journeys instead. Current layout:
+
+```
+tests/
+  home-page.spec.ts   // smoke test: does the page load with the key landmarks visible
+  add-todo.spec.ts    // the add-todo form flow (submit, validation, cancel)
+  todo-list.spec.ts   // toggling status, hide-done filtering
+  fixtures.ts         // custom test + fixture wiring (see below)
+  pages/
+    todos-page.ts      // Page Object for this page
+```
+
+Keep the smoke spec thin and independent of any specific feature — it exists to catch "the app is fundamentally broken" fast. Give each real feature/user journey its own spec file. Once the app has more than one page, nest by route, e.g. `tests/todos/list.spec.ts`, `tests/settings/profile.spec.ts` — Playwright's `testDir` picks up `*.spec.ts` at any depth.
+
+### Fixtures: a Page Object, wired in via `test.extend`
+
+A [fixture](https://playwright.dev/docs/test-fixtures) is Playwright's mechanism for handing a test a ready-to-use value instead of every test constructing it from scratch — the same problem `beforeEach` solves elsewhere, but composable and typed. We use it to inject a [Page Object](https://playwright.dev/docs/pom): a class owning every locator/interaction for a page, so a markup or copy change gets fixed in one place instead of in every spec that touches it.
+
+```
+// tests/pages/todos-page.ts
+export class TodosPage {
+  readonly page: Page;
+  readonly addNewButton: Locator;
+  // ...other locators
+
+  constructor(page: Page) {
+    this.page = page;
+    this.addNewButton = page.getByRole("button", { name: "Add New" });
+    // ...
+  }
+
+  async goto() {
+    await this.page.goto("/");
+  }
+
+  async addTodo(name: string, description?: string) {
+    await this.addNewButton.click();
+    // ...fill the form and submit
+  }
+}
+```
+
+```
+// tests/fixtures.ts
+import { test as base, expect } from "@playwright/test";
+import { TodosPage } from "./pages/todos-page";
+
+export const test = base.extend<{ todosPage: TodosPage }>({
+  todosPage: async ({ page }, use) => {
+    const todosPage = new TodosPage(page);
+    await todosPage.goto();  // pre-navigated, ready to use
+    await use(todosPage);
+  },
+});
+
+export { expect };
+```
+
+Every spec imports `test`/`expect` from `./fixtures` instead of `@playwright/test` directly, and gets a pre-navigated page object for free:
+
+```
+// tests/add-todo.spec.ts
+import { test, expect } from "./fixtures";
+
+test.describe("Add Todo", () => {
+  test("adds a new todo and shows it in the list", async ({ todosPage }) => {
+    await todosPage.addTodo("Buy groceries", "Milk, eggs, bread");
+
+    const card = todosPage.getCard("Buy groceries");
+    await expect(card).toBeVisible();
+    await expect(card.getByText("Milk, eggs, bread")).toBeVisible();
+  });
+});
+```
+
+**Adding a new test for an existing feature:** add a method to `TodosPage` if the interaction doesn't exist yet (e.g. a future `deleteTodo(name)`), then write the spec against it rather than raw `page.getByRole(...)` calls — keeps assertions readable and markup changes cheap to absorb.
+
+**Adding a new page/feature:** add a new Page Object under `tests/pages/`, expose it as another fixture in `tests/fixtures.ts` (same `base.extend` pattern, one more key in the object), and give it its own spec file.
+
+**When *not* to reach for a fixture:** don't build one just to avoid repeating a single line like `page.goto("/")` — a plain `test.beforeEach` handles that fine. Fixtures earn their keep for real behavior worth sharing (a page object, an authenticated session, seeded data), not trivial setup.
+
 ## A11Y Testing
 
 ## Other Tests
@@ -265,9 +355,7 @@ unit-tests:
 
 Runs `vitest run --coverage`. No extra CI-side threshold logic is needed — `vitest.config.ts` already defines `coverage.thresholds` (with `perFile: true`), so Vitest itself exits non-zero, and fails this job, the moment any file's coverage drops below the configured floor.
 
-### E2E, Accessibility, and Dependency scanning (placeholders)
-
-These three jobs are scaffolded but intentionally not implemented yet — each just echoes a `TODO` so the workflow shape (and the PR status checks) exist ahead of time. Swap the placeholder step for the real tooling when ready:
+### E2E tests (Playwright)
 
 ```
 e2e:
@@ -275,8 +363,28 @@ e2e:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
-    - run: echo "No E2E runner configured yet (e.g. Playwright/Cypress)."
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22
+        cache: npm
+    - run: npm ci
+    - run: npx playwright install --with-deps
+    - run: npm run test:e2e
+    - uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: playwright-report
+        path: playwright-report/
+        retention-days: 14
+```
 
+Runs against the app **built and served in the CI runner itself** — `playwright.config.ts`'s `webServer` runs `npm run build && npm run preview` when `CI` is set (instead of the dev server used locally), so tests exercise the real production bundle. This is deliberately not tested against a deployed environment (e.g. a Vercel preview URL): an in-runner server is self-contained, doesn't block on an external deploy finishing, and works the same for every PR including forks. Deploying first and pointing E2E at the live preview is a valid *additional* layer once there's a real backend/serverless behavior worth validating post-deploy — but it's a smoke-test supplement to this job, not a replacement for it.
+
+### Accessibility and Dependency scanning (placeholders)
+
+These two jobs are scaffolded but intentionally not implemented yet — each just echoes a `TODO` so the workflow shape (and the PR status checks) exist ahead of time. Swap the placeholder step for the real tooling when ready:
+
+```
 a11y:
   needs: lint
   runs-on: ubuntu-latest

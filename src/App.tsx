@@ -1,6 +1,7 @@
 import NavBar, { type NavItems } from "./components/NavBar";
 import Todos from "./components/Todos";
 import { type Todo } from "./types/todos";
+import usePageTitle from "./hooks/usePageTitle";
 
 const testTodos: Todo[] = [
   {
@@ -28,6 +29,7 @@ const navItems: NavItems[] = [
 ];
 
 function App() {
+  usePageTitle("My Todos - React Testing Overview");
   return (
     <>
       <NavBar navItems={navItems} />
