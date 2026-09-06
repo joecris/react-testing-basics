@@ -56,7 +56,6 @@ export default function Todos({ todoList }: TodosProps) {
     <div className="flex flex-col w-4/5 md:w-3/4">
       {!showAddTodoForm && (
         <>
-          <h1 className="text-3xl mb-8 text-center">My ToDo's</h1>
           <div className="flex flex-col gap-4 items-center md:flex-row justify-between my-6">
             <Button variant="primary" onClick={() => setShowAddTodoForm(true)}>
               Add New
