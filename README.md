@@ -455,9 +455,7 @@ a11y:
 
 Same shape as the `e2e` job (same runner setup, same production build via `playwright.config.ts`'s `webServer`), just scoped to `tests/a11y` via the `test:a11y` script — kept as its own job rather than folded into `e2e` so a11y regressions show up as their own PR status check rather than being buried inside a broader "e2e failed" result.
 
-### Dependency scanning (placeholder)
-
-This job is scaffolded but intentionally not implemented yet — it just echoes a `TODO` so the workflow shape (and the PR status check) exists ahead of time. Swap the placeholder step for the real tooling when ready:
+### Dependency scanning (Snyk)
 
 ```
 dependency-scan:
@@ -465,14 +463,14 @@ dependency-scan:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v4
-    - run: echo "Snyk not configured yet."
-    # Once ready:
-    # - uses: snyk/actions/node@master
-    #   env:
-    #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+    - uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high
 ```
 
-Dependency scanning needs a `SNYK_TOKEN` added as a repo secret (Settings → Secrets and variables → Actions) before uncommenting the real step.
+No `setup-node`/`npm ci` step here, unlike the other jobs — Snyk's action bundles its own Node/npm and runs `snyk test` against `package.json`/`package-lock.json` directly. Requires a `SNYK_TOKEN` repo secret (Settings → Secrets and variables → Actions → New repository secret, value from [app.snyk.io](https://app.snyk.io) account settings). `--severity-threshold=high` only fails the job on high/critical findings — without it, any low-severity transitive-dependency issue blocks the PR, which tends to be noisier than most teams want as a merge gate; drop it (or lower it) for a stricter policy.
 
 Layout and Mobile responsiveness
 How to do this in practice besides snapshots

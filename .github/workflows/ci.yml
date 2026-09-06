@@ -102,14 +102,18 @@ jobs:
           retention-days: 14
 
   dependency-scan:
-    name: Dependency scan - Snyk (placeholder)
+    name: Dependency scan (Snyk)
     needs: lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: "TODO: wire up Snyk"
-        run: echo "Snyk not configured yet. Add a SNYK_TOKEN repo secret, then swap this step for snyk/actions/node."
-      # Once ready, replace the step above with:
-      # - uses: snyk/actions/node@master
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      # Snyk's action bundles its own Node/npm and runs `snyk test` against
+      # package.json/package-lock.json directly - no setup-node/npm ci needed.
+      - uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          # Only fail the job on high/critical findings - without this, any
+          # low-severity transitive-dependency issue blocks the PR, which
+          # tends to be too noisy for most teams' merge gate.
+          args: --severity-threshold=high
